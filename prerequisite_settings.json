@@ -8,6 +8,9 @@
     "seatservice": {
         "version": "v0.1.0"
     },
+    "trunkservice": {
+        "version": "v0.1.0"
+    },
     "feedercan": {
         "version": "v0.1.0"
     },

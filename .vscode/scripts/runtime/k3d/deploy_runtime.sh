@@ -20,6 +20,7 @@ then
     VEHICLEDATABROKER_TAG=$(cat $ROOT_DIRECTORY/prerequisite_settings.json | jq .databrokerimage.version | tr -d '"')
     SEATSERVICE_TAG=$(cat $ROOT_DIRECTORY/prerequisite_settings.json | jq .seatservice.version | tr -d '"')
     FEEDERCAN_TAG=$(cat $ROOT_DIRECTORY/prerequisite_settings.json | jq .feedercan.version | tr -d '"')
+    TRUNKSERVICE_TAG=$(cat $ROOT_DIRECTORY/prerequisite_settings.json | jq .trunkservice.version | tr -d '"')
 
     docker pull ghcr.io/eclipse/kuksa.val/databroker:$VEHICLEDATABROKER_TAG
     docker tag ghcr.io/eclipse/kuksa.val/databroker:$VEHICLEDATABROKER_TAG localhost:12345/vehicledatabroker:$VEHICLEDATABROKER_TAG
@@ -34,8 +35,11 @@ then
     docker push localhost:12345/feedercan:$FEEDERCAN_TAG
 
     # We set the tag to the version from the variables above in the script. This overwrites the default values in the values-file.
-    helm install vehicleappruntime $ROOT_DIRECTORY/deploy/runtime/k3d/helm --values $ROOT_DIRECTORY/deploy/runtime/k3d/helm/values.yaml --set imageSeatService.tag=$SEATSERVICE_TAG --set imageVehicleDataBroker.tag=$VEHICLEDATABROKER_TAG --set imageFeederCan.tag=$FEEDERCAN_TAG --wait --timeout 60s --debug
-
+    echo helm install vehicleappruntime $ROOT_DIRECTORY/deploy/runtime/k3d/helm --values $ROOT_DIRECTORY/deploy/runtime/k3d/helm/values.yaml --set imageSeatService.tag=$SEATSERVICE_TAG --set imageTrunkService.tag=$TRUNKSERVICE_TAG --set imageVehicleDataBroker.tag=$VEHICLEDATABROKER_TAG --set imageFeederCan.tag=$FEEDERCAN_TAG --wait --timeout 60s --debug
+    helm install vehicleappruntime $ROOT_DIRECTORY/deploy/runtime/k3d/helm --values $ROOT_DIRECTORY/deploy/runtime/k3d/helm/values.yaml --set imageSeatService.tag=$SEATSERVICE_TAG --set imageTrunkService.tag=$TRUNKSERVICE_TAG --set imageVehicleDataBroker.tag=$VEHICLEDATABROKER_TAG --set imageFeederCan.tag=$FEEDERCAN_TAG --wait --timeout 60s --debug
+    
+    # Build and push image fro trunkservice
+    # $ROOT_DIRECTORY/.vscode/scripts/runtime/k3d/build_trunkservice.sh
 else
     echo "Runtime already deployed. To redeploy the components, run the task 'K3D - Uninstall runtime' first."
 fi

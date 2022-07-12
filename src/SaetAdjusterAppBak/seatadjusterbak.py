@@ -21,14 +21,14 @@ import json
 import logging
 import signal
 
-# import grpc
+import grpc
 from sdv.util.log import (  # type: ignore
     get_opentelemetry_log_factory,
     get_opentelemetry_log_format,
 )
-from sdv.vehicle_app import VehicleApp, subscribe_topic, subscribe_data_points
+from sdv.vehicle_app import VehicleApp, subscribe_topic
 from sdv_model import Vehicle, vehicle  # type: ignore
-from sdv_model.proto.trunk_pb2 import REAR
+from sdv_model.proto.seats_pb2 import BASE, SeatLocation  # type: ignore
 
 logging.setLogRecordFactory(get_opentelemetry_log_factory())
 logging.basicConfig(format=get_opentelemetry_log_format())
@@ -55,62 +55,55 @@ class SeatAdjusterApp(VehicleApp):
 
     async def on_start(self):
         """Run when the vehicle app starts"""
-        try:
-            await self.Vehicle.Body.Trunk.element_at("Rear").IsOpen.subscribe(
-                self.on_trunk_state_changed
-            )
-        except Exception as e:
-            logger.error(e)
-
-    async def on_trunk_state_changed(self, data):
-        response_topic = "deliveryapp/trunkState"
-        trunk_path = self.Vehicle.Body.Trunk.element_at("Rear").IsOpen.get_path()
-        await self.publish_mqtt_event(
-            response_topic,
-            json.dumps({"isOpen": data.fields[trunk_path].bool_value}),
+        await self.Vehicle.Cabin.Seat.element_at(1, 1).Position.subscribe(
+            self.on_seat_position_changed
         )
 
-    @subscribe_data_points("Vehicle.CurrentLocation.Latitude, Vehicle.CurrentLocation.Longitude")
-    async def on_gps_position_changed(self, data_str: str):
-        response_topic = "deliveryapp/positionState"
-        data = json.loads(data_str)
-        lon_path = self.Vehicle.CurrentLocation.Longitude.get_path()
-        lat_path = self.Vehicle.CurrentLocation.Latitude.get_path()
-        
+    async def on_seat_position_changed(self, data):
+        response_topic = "seatadjuster/currentPosition"
+        seat_path = self.Vehicle.Cabin.Seat.element_at(1, 1).Position.get_path()
         await self.publish_mqtt_event(
             response_topic,
-            json.dumps({"isOpen": data.fields[trunk_path].bool_value}),
+            json.dumps({"position": data.fields[seat_path].uint32_value}),
         )
 
-
-
-    @subscribe_topic("deliveryapp/openTrunk/request")
-    async def on_open_trunk_request_received(self, data_str: str) -> None:
+    @subscribe_topic("seatadjuster/setPosition/request")
+    async def on_set_position_request_received(self, data_str: str) -> None:
         data = json.loads(data_str)
-        response_topic = "deliveryapp/openTrunk/response"
+        response_topic = "seatadjuster/setPosition/response"
         response_data = {"requestId": data["requestId"], "result": {}}
 
-        try:
-            is_open = await self.Vehicle.Body.Trunk.element_at("Rear").IsOpen.get()
+        vehicle_speed = await self.Vehicle.Speed.get()
 
-            if is_open:
-                await self.Vehicle.Body.TrunkService.Close(REAR)
+        if vehicle_speed == 0:
+            try:
+                location = SeatLocation(row=1, index=1)
+                await self.Vehicle.Cabin.SeatService.MoveComponent(
+                    location, BASE, data["position"]
+                )
                 response_data["result"] = {
                     "status": 0,
-                    "message": "Trunk will now close",
+                    "message": f"""Called MoveComponent {data["position"]}""",
                 }
-            else:
-                await self.Vehicle.Body.TrunkService.Open(REAR)
+            except grpc.RpcError as rpcerror:
+                if rpcerror.code() == grpc.StatusCode.INVALID_ARGUMENT:
+                    error_msg = f"""Provided position '{data["position"]}'  \
+                    should be in between (0-1000)"""
+                else:
+                    error_msg = f"Received unknown RPC error: code={rpcerror.code()}\
+                    message={rpcerror.details()}"  # pylint: disable=E1101
+
+                response_data["result"] = {"status": 1, "message": error_msg}
+            except Exception:
                 response_data["result"] = {
-                    "status": 0,
-                    "message": "Trunk will now open",
+                    "status": 1,
+                    "message": "Exception on MoveComponent",
                 }
 
-        except Exception as e:
-            response_data["result"] = {
-                "status": 2,
-                "message": "error",
-            }
+        else:
+            error_msg = f"""Not allowed to move seat because vehicle speed
+                is {vehicle_speed} and not 0"""
+            response_data["result"] = {"status": 1, "message": error_msg}
 
         await self.publish_mqtt_event(response_topic, json.dumps(response_data))
 

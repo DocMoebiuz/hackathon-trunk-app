@@ -22,6 +22,16 @@ imageSeatService:
   tag: latest
   nodePort: 30051
 
+imageTrunkService:
+  name: trunkservice
+  repository: k3d-registry.localhost:12345/trunkservice
+  pullPolicy: Always
+  daprAppid: trunkservice
+  daprAppPort: 50053
+  daprLogLevel: debug
+  tag: latest
+  nodePort: 30052
+
 imageVehicleDataBroker:
   name: vehicledatabroker
   repository: k3d-registry.localhost:12345/vehicledatabroker
