@@ -24,7 +24,8 @@ imageSeatService:
 
 imageTrunkService:
   name: trunkservice
-  repository: k3d-registry.localhost:12345/trunkservice
+  # repository: k3d-registry.localhost:12345/trunkservice
+  repository: ghcr.io/int0x27/kuksa.val.services/trunk_service
   pullPolicy: Always
   daprAppid: trunkservice
   daprAppPort: 50053

@@ -34,6 +34,10 @@ then
     docker tag ghcr.io/eclipse/kuksa.val.feeders/dbc2val:$FEEDERCAN_TAG localhost:12345/feedercan:$FEEDERCAN_TAG
     docker push localhost:12345/feedercan:$FEEDERCAN_TAG
 
+    docker pull ghcr.io/int0x27/kuksa.val.services/trunk_service:$TRUNKSERVICE_TAG
+    docker tag ghcr.io/int0x27/kuksa.val.services/trunk_service:$TRUNKSERVICE_TAG localhost:12345/trunkservice:$TRUNKSERVICE_TAG
+    docker push localhost:12345/trunkservice:$TRUNKSERVICE_TAG
+
     # We set the tag to the version from the variables above in the script. This overwrites the default values in the values-file.
     echo helm install vehicleappruntime $ROOT_DIRECTORY/deploy/runtime/k3d/helm --values $ROOT_DIRECTORY/deploy/runtime/k3d/helm/values.yaml --set imageSeatService.tag=$SEATSERVICE_TAG --set imageTrunkService.tag=$TRUNKSERVICE_TAG --set imageVehicleDataBroker.tag=$VEHICLEDATABROKER_TAG --set imageFeederCan.tag=$FEEDERCAN_TAG --wait --timeout 60s --debug
     helm install vehicleappruntime $ROOT_DIRECTORY/deploy/runtime/k3d/helm --values $ROOT_DIRECTORY/deploy/runtime/k3d/helm/values.yaml --set imageSeatService.tag=$SEATSERVICE_TAG --set imageTrunkService.tag=$TRUNKSERVICE_TAG --set imageVehicleDataBroker.tag=$VEHICLEDATABROKER_TAG --set imageFeederCan.tag=$FEEDERCAN_TAG --wait --timeout 60s --debug

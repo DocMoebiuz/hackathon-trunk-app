@@ -36,7 +36,7 @@ spec:
         dapr.io/app-protocol: "grpc"
     spec:
       containers:
-        - name: seatservice
+        - name: {{.Values.imageTrunkService.name}}
           image: {{.Values.imageTrunkService.repository}}:{{.Values.imageTrunkService.tag}}
           imagePullPolicy: {{.Values.imageTrunkService.pullPolicy}}
           ports:
